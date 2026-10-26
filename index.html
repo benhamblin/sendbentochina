@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Send Ben to China</title>
     <style>
       * {
@@ -11,21 +14,24 @@
         padding: 0;
       }
 
+      html,
       body {
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
           Arial, sans-serif;
         background-color: #f4f4f0;
         color: #111;
-        overflow-x: hidden;
       }
 
       #canvas-container {
         position: fixed;
         top: 0;
         left: 0;
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        height: 100dvh;
         z-index: 1;
       }
 
@@ -33,7 +39,7 @@
         position: relative;
         z-index: 2;
         pointer-events: none;
-        min-height: 100vh;
+        height: 100dvh;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -100,13 +106,6 @@
         box-shadow: 0px 0px 0px #111;
       }
 
-      footer {
-        font-size: 0.85rem;
-        color: #555;
-        pointer-events: auto;
-        font-weight: 500;
-      }
-
       #loading {
         position: fixed;
         top: 50%;
@@ -119,17 +118,38 @@
         border: 2px solid #111;
       }
 
+      /* Mobile split screen: 3D model on top, card fixed at bottom, zero scrolling */
       @media (max-width: 768px) {
+        #canvas-container {
+          height: 52dvh;
+        }
+        #loading {
+          top: 26dvh;
+        }
         .ui-layer {
           padding: 1rem;
         }
         .content {
-          margin-top: 48vh;
-          margin-bottom: 1rem;
-          padding: 1.5rem;
+          margin: auto 0 0 0;
+          max-width: 100%;
+          padding: 1.25rem;
+          background: rgba(244, 244, 240, 0.95);
         }
         h1 {
-          font-size: 2.1rem;
+          font-size: 1.85rem;
+          margin-bottom: 0.6rem;
+        }
+        p {
+          font-size: 0.92rem;
+          line-height: 1.4;
+          margin-bottom: 0.85rem;
+        }
+        .cta-button {
+          display: block;
+          width: 100%;
+          text-align: center;
+          padding: 0.8rem 1.2rem;
+          font-size: 1rem;
         }
       }
     </style>
@@ -162,14 +182,12 @@
           donating to my GoFundMe campaign.
         </p>
         <a
-          href="https://www.gofundme.com/manage/send-ben-to-china-for-world-student-games"
+          href="https://www.gofundme.com/f/send-ben-to-china-for-world-student-games"
           target="_blank"
           class="cta-button"
           >Donate to the GoFundMe</a
         >
       </div>
-
-      <!-- <footer>Drag to rotate 3D Ben • Scroll to zoom</footer> -->
     </div>
 
     <script type="module">
@@ -183,16 +201,22 @@
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0xf4f4f0);
 
+      const getCanvasSize = () => ({
+        width: container.clientWidth,
+        height: container.clientHeight,
+      });
+
+      const initialSize = getCanvasSize();
       const camera = new THREE.PerspectiveCamera(
         45,
-        window.innerWidth / window.innerHeight,
+        initialSize.width / initialSize.height,
         0.1,
         100,
       );
       camera.position.set(0, 1.2, 4);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(initialSize.width, initialSize.height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = true;
       container.appendChild(renderer.domElement);
@@ -223,13 +247,13 @@
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
+      controls.enablePan = false;
       controls.maxPolarAngle = Math.PI / 2 + 0.05; // Stop camera going under floor
 
       // Load 3D Model
       const loader = new GLTFLoader();
       let model;
 
-      // Change to 3dben.glp if your file literally has a .glp extension
       loader.load(
         "./3dben.glb",
         (gltf) => {
@@ -241,15 +265,18 @@
           const size = box.getSize(new THREE.Vector3());
 
           const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 2.5 / maxDim;
+          const isMobile = window.innerWidth <= 768;
+          const scale = (isMobile ? 2.2 : 2.5) / maxDim;
           model.scale.setScalar(scale);
 
           model.position.sub(center.multiplyScalar(scale));
 
           // Shift slightly right on desktop so the text card on the left doesn't block you
-          if (window.innerWidth > 768) {
+          if (!isMobile) {
             model.position.x += 0.9;
             controls.target.set(0.9, 0, 0);
+          } else {
+            controls.target.set(0, 0, 0);
           }
 
           model.traverse((child) => {
@@ -283,9 +310,10 @@
 
       // Responsive resize
       window.addEventListener("resize", () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
+        const { width, height } = getCanvasSize();
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(width, height);
       });
     </script>
   </body>
